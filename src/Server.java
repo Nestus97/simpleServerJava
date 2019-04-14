@@ -60,7 +60,8 @@ public class Server {
                     }
 
                     for (ClientHandler mc : clientHandlers) {
-                        mc.dos.writeUTF(name + ": " + message);
+                        mc.dos.writeInt(messageLength);
+                        mc.dos.writeChars(message);
                     }
                 }
             }
