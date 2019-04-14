@@ -39,10 +39,9 @@ public class Server {
             try {
                 while (true) {
                     int messageLength = dis.readInt();
-
                     StringBuilder stringBuilder = new StringBuilder();
                     for (int i = 0; i < messageLength; i++) {
-                        stringBuilder.append(dis.readChar());
+                        stringBuilder.append((char)dis.readByte());
                     }
                     String message = stringBuilder.toString();
 
@@ -61,7 +60,7 @@ public class Server {
 
                     for (ClientHandler mc : clientHandlers) {
                         mc.dos.writeInt(messageLength);
-                        mc.dos.writeChars(message);
+                        mc.dos.writeBytes(message);
                     }
                 }
             }
