@@ -2,7 +2,7 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-// klsa Server
+// klasa Server
 public class Server
 {
 
@@ -105,7 +105,7 @@ class ClientHandler implements Runnable {
                     }
                 }
                 this.dos.writeUTF("You: " + received);
-            } catch (SocketException ex) {
+            } catch (SocketException | EOFException ex) {
                 //this.s.close();
                 this.isloggedin = false;
                 this.disconnected = true;
