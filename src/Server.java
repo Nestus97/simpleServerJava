@@ -64,7 +64,7 @@ public class Server {
                     }
                 }
             }
-            catch (EOFException e) {
+            catch (EOFException | SocketException e) {
                 System.out.println("Klient sie rozlaczyl: " + name + " !!!");
             }
             catch (IOException e) {
