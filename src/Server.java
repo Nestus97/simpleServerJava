@@ -2,143 +2,83 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 
-// klasa Server
-public class Server
-{
+public class Server {
+    private Vector<ClientHandler> clientHandlers = new Vector<>();
+    private int clientNumber = 0;
+    private int port = 1234;
 
-    // Vector do przetrzymywania aktywnych klientow
-    static Vector<ClientHandler> ar = new Vector<>();
+    public void start() throws IOException {
+        ServerSocket serverSocket = new ServerSocket(port);
 
-    // licznik dla klientow
-    static int i = 0;
+        System.out.println("Nasluchiwanie na porcie " + port);
 
-    public static void main(String[] args) throws IOException
-    {
-        // server nasluchuje na porcie 1234
-        ServerSocket ss = new ServerSocket(1234);
-
-        Socket s = null;
-
-        // petla zbierajaca nowych klientow
-        while (true)
-        {
-            // czeka na klienta
-            s = ss.accept();
-
-            System.out.println("Zglosil sie nowy klient : " + s);
-
-            // input i output dla kazdego z klientow
-            DataInputStream dis = new DataInputStream(s.getInputStream());
-            DataOutputStream dos = new DataOutputStream(s.getOutputStream());
-
-            System.out.println("tworze nowy watek dla tego klienta...");
-
-            // tworzenie nowego obiektu ClientHandler dla nowego klienta
-            ClientHandler klient = new ClientHandler(s,"client " + i, dis, dos);
-
-            // tworzenie watku dla nowego klienta
-            Thread t = new Thread(klient);
-
-            System.out.println("Dodanie tego klienta do listy aktywnych klientow");
-
-            // dodanie klienta do listy aktywnych klientow
-            ar.add(klient);
-
-            // start tego watku.
-            t.start();
-
-            // inkrementacja i dla nowego klienta
-            // potrzebne do nazwy klienta :)
-            i++;
+        while (true) {
+            Socket socket = serverSocket.accept();
+            System.out.println("Zglosil sie nowy klient : " + socket);
+            ClientHandler clientHandler = new ClientHandler(socket, "client " + clientNumber++);
+            clientHandlers.add(clientHandler);
+            new Thread(clientHandler).start();
         }
     }
-}
 
-// klasa ClientHandler
-class ClientHandler implements Runnable {
-    Scanner scn = new Scanner(System.in);
-    private String name;
-    final DataInputStream dis;
-    final DataOutputStream dos;
-    Socket s;
-    boolean isloggedin;
-    boolean disconnected;
+    class ClientHandler implements Runnable {
+        private String name;
+        private final DataInputStream dis;
+        private final DataOutputStream dos;
+        private Socket socket;
 
-    // constructor
-    public ClientHandler(Socket s, String name, DataInputStream dis, DataOutputStream dos) {
-        this.s = s;
-        this.name = name;
-        this.dis = dis;
-        this.dos = dos;
-        this.isloggedin = true;
-        this.disconnected = false;
-    }
+        public ClientHandler(Socket socket, String name) throws IOException {
+            this.socket = socket;
+            this.name = name;
+            this.dis = new DataInputStream(socket.getInputStream());
+            this.dos = new DataOutputStream(socket.getOutputStream());
+        }
 
-    @Override
-    public void run() {
-
-        String received;
-        while (this.isloggedin) {
+        @Override
+        public void run() {
             try {
-                // odbior ciagu znakow
-                received = dis.readUTF();
+                while (true) {
+                    int messageLength = dis.readInt();
 
-                if (received.equals("exit")) {
-                    System.out.println(this.name + " zostal odlaczony od czatu...");
-                    for (ClientHandler mc : Server.ar) {
-                        if ((!(mc.name.equals(this.name))) && mc.isloggedin == true) {
-                            mc.dos.writeUTF(this.name + " odlaczyl sie od chatu!");
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (int i = 0; i < messageLength; i++) {
+                        stringBuilder.append(dis.readChar());
+                    }
+                    String message = stringBuilder.toString();
+
+                    if (message.equals("exit")) {
+                        System.out.println(name + " zostal odlaczony od czatu...");
+
+                        for (ClientHandler mc : clientHandlers) {
+                            if (!(mc.name.equals(name))) {
+                                mc.dos.writeUTF(name + " odlaczyl sie od chatu!");
+                            }
                         }
+                        dos.writeUTF("Zostales odlaczony od chatu!");
+                        socket.close();
+                        break;
                     }
-                    this.dos.writeUTF("Zostales odlaczony od chatu!");
-                    this.isloggedin = false;
-                    synchronized (this.s) {
-                        this.s.close();
-                    }
-                    break;
-                }
 
-                // vector ar przetrzymuje aktywnych klientow
-                for (ClientHandler mc : Server.ar) {
-                    if ((!(mc.name.equals(this.name))) && mc.isloggedin == true) {
-                        mc.dos.writeUTF(this.name + ": " + received);
+                    for (ClientHandler mc : clientHandlers) {
+                        mc.dos.writeUTF(name + ": " + message);
                     }
                 }
-                this.dos.writeUTF("You: " + received);
-            } catch (SocketException | EOFException ex) {
-                //this.s.close();
-                this.isloggedin = false;
-                this.disconnected = true;
-                System.out.println("Nagle przerwanie uzytkownika: " +this.name+" !!!");
-            } catch (IOException e) {
-                this.isloggedin = false;
+            }
+            catch (EOFException e) {
+                System.out.println("Klient sie rozlaczyl: " + name + " !!!");
+            }
+            catch (IOException e) {
                 e.printStackTrace();
-            } //finally
-            //if(disconnected){
-            //    for (ClientHandler mc : Server.ar) {
-            //        if ((!(mc.name.equals(this.name))) && mc.isloggedin == true) {
-            //            mc.dos.writeUTF(this.name + ": ZEPSULO SIE");
-            //        }
-            //    }
-            //}
-        }
-        try {
+            }
 
-            // zamykanie zasobow
-            this.dis.close();
-            this.dos.close();
-           /* int k=0;
-            for (ClientHandler mc : Server.ar)
-            {
-                if(mc.name.equals(this.name))
-                {
-                    Server.ar.remove(k);
-                }
-                k++;
-            } */
-
-        } catch (IOException e) {
-            e.printStackTrace();
+            try {
+                clientHandlers.remove(this);
+                socket.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
+
