@@ -72,7 +72,7 @@ public class MainServerThread extends Thread {
         readerThreads.add(readerThread);
         writerThreads.add(writerThread);
         readerThread.start();
-//        writerThread.start();
+        writerThread.start();
     }
 
     public void enqueueToBroadcast(ScribblePart scribblePart) throws InterruptedException {
