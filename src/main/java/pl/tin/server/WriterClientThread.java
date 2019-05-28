@@ -18,6 +18,9 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class WriterClientThread extends Thread {
 
+    public static int SCRIBBLE_PART_DRAWN = 1;
+    public static int UNDO_REQUESTED = 2;
+
     private BlockingQueue<ScribblePart> scribblePartsToSend = new LinkedBlockingDeque<>();
     @Getter private int clientId;
     private Socket socket;
@@ -39,6 +42,7 @@ public class WriterClientThread extends Thread {
 
             while (!Thread.interrupted()) {
                 var scribblePart = scribblePartsToSend.take();
+                outputStream.writeInt(SCRIBBLE_PART_DRAWN);
                 sendScribblePart(scribblePart);
             }
         }

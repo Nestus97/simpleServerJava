@@ -26,7 +26,6 @@ public class MainServerThread extends Thread {
     private int lastClientId = 1;
 
     @Getter private List<Scribble> scribblesHistory = new LinkedList<>();
-    private Scribble currentScribble = null;
 
     @Override
     public void run() {
