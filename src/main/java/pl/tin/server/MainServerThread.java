@@ -1,11 +1,13 @@
 package pl.tin.server;
 
+import lombok.Getter;
 import lombok.SneakyThrows;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -17,12 +19,15 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class MainServerThread extends Thread {
 
-    private ConnectionAccepterThread connectionAccepterThread;
-
     private BlockingQueue<ScribblePart> scribblePartsToBroadcast = new LinkedBlockingDeque<>();
     private List<ReaderClientThread> readerThreads = new ArrayList<>();
     private List<WriterClientThread> writerThreads = new ArrayList<>();
+
+    private ConnectionAccepterThread connectionAccepterThread;
     private int lastClientId = 1;
+
+    @Getter private List<Scribble> scribblesHistory = new LinkedList<>();
+    private Scribble currentScribble = null;
 
     @Override
     public void run() {
@@ -33,8 +38,10 @@ public class MainServerThread extends Thread {
             while (!Thread.interrupted()) {
                 var scribblePart = scribblePartsToBroadcast.take();
 
+                addToHistory(scribblePart);
+
                 for (var writerThread : writerThreads) {
-                    if (writerThread.getClientId() != scribblePart.getScribberId())
+                    if (writerThread.getClientId() != scribblePart.getScribblerId())
                         writerThread.enqueueToSend(scribblePart);
                 }
             }
@@ -45,6 +52,15 @@ public class MainServerThread extends Thread {
 
         System.out.println("MainServerThread has ended");
         interruptChildThreads();
+    }
+
+    private void addToHistory(ScribblePart scribblePart) {
+        if (currentScribble == null) {
+            currentScribble = new Scribble(scribblePart);
+            scribblesHistory.add(currentScribble);
+        } else {
+            currentScribble.addPixels(scribblePart.getPixels());
+        }
     }
 
     private void interruptChildThreads() {
@@ -63,16 +79,15 @@ public class MainServerThread extends Thread {
     public void registerClient(Socket clientSocket) {
         int generatedClientId = lastClientId++;
         var readerThread = new ReaderClientThread(generatedClientId, clientSocket, this);
-        var writerThread = new WriterClientThread(generatedClientId, clientSocket);
+        var writerThread = new WriterClientThread(generatedClientId, scribblesHistory, clientSocket);
 
         System.out.println("Połączył się klient ID = " + generatedClientId);
 
-        new DataOutputStream(clientSocket.getOutputStream()).writeInt(generatedClientId);
-
-        readerThreads.add(readerThread);
         writerThreads.add(writerThread);
-        readerThread.start();
+        readerThreads.add(readerThread);
+
         writerThread.start();
+        readerThread.start();
     }
 
     public void enqueueToBroadcast(ScribblePart scribblePart) throws InterruptedException {

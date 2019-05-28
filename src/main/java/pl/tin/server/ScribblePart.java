@@ -6,12 +6,12 @@ import java.util.List;
 
 @Data
 public class ScribblePart {
-    private int scribberId;
+    private int scribblerId;
     private List<Pixel> pixels;
     private boolean isEnd;
 
-    public ScribblePart(int scribberId, List<Pixel> pixels, boolean isEnd) {
-        this.scribberId = scribberId;
+    public ScribblePart(int scribblerId, List<Pixel> pixels, boolean isEnd) {
+        this.scribblerId = scribblerId;
         this.pixels = pixels;
         this.isEnd = isEnd;
     }

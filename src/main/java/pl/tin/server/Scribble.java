@@ -4,15 +4,17 @@ import lombok.Data;
 
 import java.util.List;
 
-@Data
-public class Scribble {
-    private int scribberId;
-    private List<Pixel> pixels;
-    private boolean isCompleted;
+public class Scribble extends ScribblePart {
 
-    public Scribble(int scribberId, List<Pixel> pixels, boolean isCompleted) {
-        this.scribberId = scribberId;
-        this.pixels = pixels;
-        this.isCompleted = isCompleted;
+    public Scribble(int scribblerId, List<Pixel> pixels, boolean isCompleted) {
+        super(scribblerId, pixels, isCompleted);
+    }
+
+    public Scribble(ScribblePart scribblePart) {
+        super(scribblePart.getScribblerId(), scribblePart.getPixels(), scribblePart.isEnd());
+    }
+
+    public void addPixels(List<Pixel> pixels) {
+        getPixels().addAll(pixels);
     }
 }
