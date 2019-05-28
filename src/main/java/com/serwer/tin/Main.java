@@ -1,3 +1,5 @@
+package com.serwer.tin;
+
 import java.io.IOException;
 
 public class Main {

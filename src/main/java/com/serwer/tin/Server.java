@@ -1,8 +1,11 @@
-import java.io.*;
-import java.util.*;
-import java.net.*;
-import com.serwer.tin.ArtPart;
-import com.serwer.tin.Pixel;
+package com.serwer.tin;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Vector;
 
 
 public class Server {
@@ -122,7 +125,7 @@ public class Server {
                     if (message.equals("exit")) {
                         System.out.println(name + " zostal odlaczony od czatu...");
 
-                        for (ClientHandler mc : clientHandlers) {
+                        for (ReaderClientThread mc : clientHandlers) {
                             if (!(mc.name.equals(name))) {
                                 mc.dos.writeUTF(name + " odlaczyl sie od chatu!");
                             }
@@ -132,7 +135,7 @@ public class Server {
                         break;
                     }
 
-                    for (ClientHandler mc : clientHandlers) {
+                    for (ReaderClientThread mc : clientHandlers) {
                         if(mc.name.equals(name)){
                             mc.dos.writeInt(5 + messageLength);
                             mc.dos.writeBytes("You: " + message);
