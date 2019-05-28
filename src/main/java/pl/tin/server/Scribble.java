@@ -17,4 +17,12 @@ public class Scribble extends ScribblePart {
     public void addPixels(List<Pixel> pixels) {
         getPixels().addAll(pixels);
     }
+
+    public boolean isCompleted() {
+        return super.isEnd();
+    }
+
+    public void setCompleted(boolean value) {
+        super.setEnd(value);
+    }
 }

@@ -5,6 +5,7 @@ import lombok.SneakyThrows;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.List;
@@ -41,18 +42,15 @@ public class WriterClientThread extends Thread {
                 sendScribblePart(scribblePart);
             }
         }
-        catch (InterruptedException e) {
+        catch (InterruptedException | SocketException e) {
             //just end the loop
-            e.printStackTrace();
-        }
-        catch (SocketException e) {
             e.printStackTrace();
         }
 
         System.out.println("WriterThread has ended");
     }
 
-    private void sendStartInfo() throws IOException {
+    private void sendStartInfo() throws IOException, InterruptedException {
         outputStream.writeInt(clientId);
         outputStream.writeInt(initialScribblesHistory.size());
         for (Scribble scribble : initialScribblesHistory) {
@@ -60,18 +58,24 @@ public class WriterClientThread extends Thread {
         }
     }
 
-    private void sendScribblePart(ScribblePart scribblePart) throws IOException {
-        outputStream.writeInt(scribblePart.getPixels().size());
-        outputStream.writeInt(scribblePart.getScribblerId());
+    private void sendScribblePart(ScribblePart scribblePart) throws IOException, InterruptedException {
+        try {
+            outputStream.writeInt(scribblePart.getPixels().size());
+            outputStream.writeInt(scribblePart.getScribblerId());
 
-        for (var pixel : scribblePart.getPixels()) {
-            outputStream.writeInt(pixel.getX());
-            outputStream.writeInt(pixel.getY());
-            outputStream.writeByte(pixel.getR());
-            outputStream.writeByte(pixel.getG());
-            outputStream.writeByte(pixel.getB());
+            for (var pixel : scribblePart.getPixels()) {
+                outputStream.writeInt(pixel.getX());
+                outputStream.writeInt(pixel.getY());
+                outputStream.writeInt(pixel.getR());
+                outputStream.writeInt(pixel.getG());
+                outputStream.writeInt(pixel.getB());
+            }
+            outputStream.writeBoolean(scribblePart.isEnd());
         }
-        outputStream.writeBoolean(scribblePart.isEnd());
+        catch (SocketException e) {
+            Thread.currentThread().interrupt();
+            throw new InterruptedException();
+        }
     }
 
     public void enqueueToSend(ScribblePart scribblePart) throws InterruptedException {
@@ -80,6 +84,7 @@ public class WriterClientThread extends Thread {
 
     @SneakyThrows(IOException.class)
     public void close() {
+        //TODO zastanowić się
         socket.close();
     }
 }

@@ -3,7 +3,6 @@ package pl.tin.server;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -55,12 +54,16 @@ public class MainServerThread extends Thread {
     }
 
     private void addToHistory(ScribblePart scribblePart) {
-        if (currentScribble == null) {
-            currentScribble = new Scribble(scribblePart);
-            scribblesHistory.add(currentScribble);
-        } else {
-            currentScribble.addPixels(scribblePart.getPixels());
+        Scribble correspondingScribble = CollectionHelpersKt.findLast(
+                scribblesHistory,
+                (scribble -> scribble.getScribblerId() == scribblePart.getScribblerId())
+        );
+
+        if (correspondingScribble != null && !correspondingScribble.isCompleted()) {
+            correspondingScribble.addPixels(scribblePart.getPixels());
+            correspondingScribble.setCompleted(scribblePart.isEnd());
         }
+        else scribblesHistory.add(new Scribble(scribblePart));
     }
 
     private void interruptChildThreads() {

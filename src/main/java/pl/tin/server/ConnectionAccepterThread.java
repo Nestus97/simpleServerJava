@@ -40,6 +40,7 @@ public class ConnectionAccepterThread extends Thread {
 
     @SneakyThrows(IOException.class)
     public void close() {
+        //TODO zastanowić się
         serverSocket.close();
     }
 }

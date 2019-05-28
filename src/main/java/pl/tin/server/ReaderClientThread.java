@@ -29,15 +29,13 @@ public class ReaderClientThread extends Thread {
         inputStream = new DataInputStream(socket.getInputStream());
     }
 
-//    private int counter = 0;
-
     @Override
+    @SneakyThrows(IOException.class)
     public void run() {
         try {
             while (!Thread.interrupted()) {
                 var scribblePart = readScribblePart();
                 mainServerThread.enqueueToBroadcast(scribblePart);
-//                System.out.println("reader (" + clientId + ") " + counter++);
             }
         }
         catch (InterruptedException e) {
@@ -46,8 +44,7 @@ public class ReaderClientThread extends Thread {
         System.out.println("ReaderThread has ended");
     }
 
-    @SneakyThrows(IOException.class)
-    private ScribblePart readScribblePart() throws InterruptedException {
+    private ScribblePart readScribblePart() throws InterruptedException, IOException {
         try {
             List<Pixel> pixels = new ArrayList<>();
             int pixelsCount = inputStream.readInt();
@@ -58,9 +55,9 @@ public class ReaderClientThread extends Thread {
                 pixels.add(new Pixel(
                     inputStream.readInt(),
                     inputStream.readInt(),
-                    inputStream.readByte(),
-                    inputStream.readByte(),
-                    inputStream.readByte()
+                    inputStream.readInt(),
+                    inputStream.readInt(),
+                    inputStream.readInt()
                 ));
             }
             boolean isEnd = inputStream.readBoolean();
@@ -80,6 +77,7 @@ public class ReaderClientThread extends Thread {
 
     @SneakyThrows(IOException.class)
     public void close() {
+        //TODO zastanowić się
         socket.close();
     }
 }
