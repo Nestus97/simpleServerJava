@@ -2,10 +2,12 @@ package pl.tin.server;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import pl.tin.server.events.Request;
+import pl.tin.server.events.DrawRequest;
+import pl.tin.server.events.UndoRequest;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.List;
@@ -18,10 +20,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class WriterClientThread extends Thread {
 
-    public static int SCRIBBLE_PART_DRAWN = 1;
-    public static int UNDO_REQUESTED = 2;
-
-    private BlockingQueue<ScribblePart> scribblePartsToSend = new LinkedBlockingDeque<>();
+    private BlockingQueue<Request> requestsToDistribute = new LinkedBlockingDeque<>();
     @Getter private int clientId;
     private Socket socket;
     private DataOutputStream outputStream;
@@ -41,14 +40,18 @@ public class WriterClientThread extends Thread {
             sendStartInfo();
 
             while (!Thread.interrupted()) {
-                var scribblePart = scribblePartsToSend.take();
-                outputStream.writeInt(SCRIBBLE_PART_DRAWN);
-                sendScribblePart(scribblePart);
+                var request = requestsToDistribute.take();
+
+                if (request instanceof DrawRequest) {
+                    sendDrawRequest((DrawRequest)request);
+                }
+                else if (request instanceof UndoRequest) {
+                    sendUndoRequest((UndoRequest)request);
+                }
             }
         }
         catch (InterruptedException | SocketException e) {
             //just end the loop
-            e.printStackTrace();
         }
 
         System.out.println("WriterThread has ended");
@@ -56,10 +59,21 @@ public class WriterClientThread extends Thread {
 
     private void sendStartInfo() throws IOException, InterruptedException {
         outputStream.writeInt(clientId);
+
         outputStream.writeInt(initialScribblesHistory.size());
         for (Scribble scribble : initialScribblesHistory) {
             sendScribblePart(scribble);
         }
+    }
+
+    private void sendDrawRequest(DrawRequest drawRequest) throws IOException, InterruptedException {
+        outputStream.writeInt(Request.DRAW_REQUEST);
+        sendScribblePart(drawRequest.getScribblePart());
+    }
+
+    private void sendUndoRequest(UndoRequest undoRequest) throws IOException {
+        outputStream.writeInt(Request.UNDO_REQUEST);
+        outputStream.writeInt(undoRequest.getScribblerId());
     }
 
     private void sendScribblePart(ScribblePart scribblePart) throws IOException, InterruptedException {
@@ -82,8 +96,12 @@ public class WriterClientThread extends Thread {
         }
     }
 
-    public void enqueueToSend(ScribblePart scribblePart) throws InterruptedException {
-        scribblePartsToSend.put(scribblePart);
+    public void enqueueDrawRequest(DrawRequest drawRequest) throws InterruptedException {
+        requestsToDistribute.put(drawRequest);
+    }
+
+    public void enqueueUndoRequest(UndoRequest undoRequest) throws InterruptedException {
+        requestsToDistribute.put(undoRequest);
     }
 
     @SneakyThrows(IOException.class)

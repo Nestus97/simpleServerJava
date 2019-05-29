@@ -2,7 +2,9 @@ package pl.tin.server;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-
+import pl.tin.server.events.Request;
+import pl.tin.server.events.DrawRequest;
+import pl.tin.server.events.UndoRequest;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -18,7 +20,8 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class MainServerThread extends Thread {
 
-    private BlockingQueue<ScribblePart> scribblePartsToBroadcast = new LinkedBlockingDeque<>();
+    private BlockingQueue<Request> requestsToDistribute = new LinkedBlockingDeque<>();
+
     private List<ReaderClientThread> readerThreads = new ArrayList<>();
     private List<WriterClientThread> writerThreads = new ArrayList<>();
 
@@ -34,13 +37,27 @@ public class MainServerThread extends Thread {
 
         try {
             while (!Thread.interrupted()) {
-                var scribblePart = scribblePartsToBroadcast.take();
+                var request = requestsToDistribute.take();
 
-                addToHistory(scribblePart);
+                if (request instanceof DrawRequest) {
+                    var drawRequest = (DrawRequest)request;
+                    var scribblePart = drawRequest.getScribblePart();
 
-                for (var writerThread : writerThreads) {
-                    if (writerThread.getClientId() != scribblePart.getScribblerId())
-                        writerThread.enqueueToSend(scribblePart);
+                    addToHistory(scribblePart);
+
+                    for (var writerThread : writerThreads) {
+                        if (writerThread.getClientId() != scribblePart.getScribblerId())
+                            writerThread.enqueueDrawRequest(drawRequest);
+                    }
+                }
+                else if (request instanceof UndoRequest) {
+                    var undoRequest = (UndoRequest)request;
+
+                    performUndo(undoRequest.getScribblerId());
+
+                    for (var writerThread : writerThreads) {
+                        writerThread.enqueueUndoRequest(undoRequest);
+                    }
                 }
             }
         }
@@ -53,16 +70,24 @@ public class MainServerThread extends Thread {
     }
 
     private void addToHistory(ScribblePart scribblePart) {
-        Scribble correspondingScribble = CollectionHelpersKt.findLast(
+        Scribble lastScribble = CollectionHelpersKt.findLast(
                 scribblesHistory,
-                (scribble -> scribble.getScribblerId() == scribblePart.getScribblerId())
+                scribble -> scribble.getScribblerId() == scribblePart.getScribblerId()
         );
 
-        if (correspondingScribble != null && !correspondingScribble.isCompleted()) {
-            correspondingScribble.addPixels(scribblePart.getPixels());
-            correspondingScribble.setCompleted(scribblePart.isEnd());
+        if (lastScribble != null && !lastScribble.isCompleted()) {
+            lastScribble.addPixels(scribblePart.getPixels());
+            lastScribble.setCompleted(scribblePart.isEnd());
         }
         else scribblesHistory.add(new Scribble(scribblePart));
+    }
+
+    private void performUndo(int scribblerId) {
+        Scribble lastScribble = CollectionHelpersKt.findLast(
+                scribblesHistory,
+                scribble -> scribble.getScribblerId() == scribblerId
+        );
+        scribblesHistory.remove(lastScribble);
     }
 
     private void interruptChildThreads() {
@@ -92,7 +117,11 @@ public class MainServerThread extends Thread {
         readerThread.start();
     }
 
-    public void enqueueToBroadcast(ScribblePart scribblePart) throws InterruptedException {
-        scribblePartsToBroadcast.put(scribblePart);
+    public void enqueueDrawRequest(DrawRequest drawRequest) throws InterruptedException {
+        requestsToDistribute.put(drawRequest);
+    }
+
+    public void enqueueUndoRequest(UndoRequest undoRequest) throws InterruptedException {
+        requestsToDistribute.put(undoRequest);
     }
 }

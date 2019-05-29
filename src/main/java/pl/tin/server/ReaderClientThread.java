@@ -2,6 +2,9 @@ package pl.tin.server;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import pl.tin.server.events.Request;
+import pl.tin.server.events.DrawRequest;
+import pl.tin.server.events.UndoRequest;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -34,14 +37,35 @@ public class ReaderClientThread extends Thread {
     public void run() {
         try {
             while (!Thread.interrupted()) {
-                var scribblePart = readScribblePart();
-                mainServerThread.enqueueToBroadcast(scribblePart);
+                var requestCode = inputStream.readInt();
+
+                switch (requestCode) {
+                    case Request.DRAW_REQUEST:
+                        var drawRequest = readDrawRequest();
+                        mainServerThread.enqueueDrawRequest(drawRequest);
+                        break;
+
+                    case Request.UNDO_REQUEST:
+                        var undoRequest = readUndoRequest();
+                        mainServerThread.enqueueUndoRequest(undoRequest);
+                        break;
+                }
             }
         }
-        catch (InterruptedException e) {
+        catch (InterruptedException | EOFException e) {
             //just end the loop
         }
         System.out.println("ReaderThread has ended");
+    }
+
+    private DrawRequest readDrawRequest() throws IOException, InterruptedException {
+        var scribblePart = readScribblePart();
+        return new DrawRequest(scribblePart);
+    }
+
+    private UndoRequest readUndoRequest() throws IOException {
+        var scribblerId = inputStream.readInt();
+        return new UndoRequest(scribblerId);
     }
 
     private ScribblePart readScribblePart() throws InterruptedException, IOException {
