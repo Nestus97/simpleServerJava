@@ -1,14 +1,11 @@
 package pl.tin.server;
 
-import lombok.Getter;
 import lombok.SneakyThrows;
-import pl.tin.server.events.Request;
-import pl.tin.server.events.DrawRequest;
-import pl.tin.server.events.UndoRequest;
+import pl.tin.server.events.*;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -22,13 +19,15 @@ public class MainServerThread extends Thread {
 
     private BlockingQueue<Request> requestsToDistribute = new LinkedBlockingDeque<>();
 
+    private List<Room> rooms = new ArrayList<>();
+
     private List<ReaderClientThread> readerThreads = new ArrayList<>();
     private List<WriterClientThread> writerThreads = new ArrayList<>();
 
     private ConnectionAccepterThread connectionAccepterThread;
     private int lastClientId = 1;
+    private int lastRoomId = 0;
 
-    @Getter private List<Scribble> scribblesHistory = new LinkedList<>();
 
     @Override
     public void run() {
@@ -42,21 +41,72 @@ public class MainServerThread extends Thread {
                 if (request instanceof DrawRequest) {
                     var drawRequest = (DrawRequest)request;
                     var scribblePart = drawRequest.getScribblePart();
+                    int roomId = drawRequest.getRoomId();
 
-                    addToHistory(scribblePart);
-
+                    for(var room : rooms)
+                    {
+                        if(room.getRoomId() == roomId)
+                            addToHistory(room, scribblePart);
+                    }
                     for (var writerThread : writerThreads) {
-                        if (writerThread.getClientId() != scribblePart.getScribblerId())
+                        if (writerThread.getClientId() != scribblePart.getScribblerId()
+                                && writerThread.getRoomId() == roomId)
+                        {
                             writerThread.enqueueDrawRequest(drawRequest);
+                        }
                     }
                 }
                 else if (request instanceof UndoRequest) {
                     var undoRequest = (UndoRequest)request;
+                    int roomId = undoRequest.getRoomId();
 
-                    performUndo(undoRequest.getScribblerId());
+                    for(var room : rooms)
+                    {
+                        if(room.getRoomId() == roomId) { performUndo(room, undoRequest.getScribblerId()); }
+                    }
 
                     for (var writerThread : writerThreads) {
-                        writerThread.enqueueUndoRequest(undoRequest);
+                        if(writerThread.getRoomId() == roomId) { writerThread.enqueueUndoRequest(undoRequest); }
+                    }
+                }
+                else if (request instanceof CreateRoomRequest) {
+                    var createRoomRequest = (CreateRoomRequest)request;
+                    Room room = new Room(++lastRoomId, ((CreateRoomRequest) request).getRoomName());
+                    rooms.add(room);
+
+                    for(var writerThread : writerThreads) {
+                        if(writerThread.getClientId() == createRoomRequest.getClientId()) {
+                            writerThread.setRoomId(lastRoomId);
+                            writerThread.newRoomScribble();
+                            writerThread.enqueueCreateRoomRequest(createRoomRequest);
+                        }
+                    }
+                    for(var readerThread : readerThreads) {
+                        if(readerThread.getClientId() == createRoomRequest.getClientId()) {
+                            readerThread.setRoomId(lastRoomId);
+                        }
+                    }
+
+                }
+                else if (request instanceof JoinRoomRequest) {
+                    var joinRoomRequest = (JoinRoomRequest)request;
+
+                    for(var writerThread : writerThreads) {
+                        if(writerThread.getClientId() == joinRoomRequest.getClientId()) {
+                            for(var room : rooms) {
+                                if(room.getRoomId() == joinRoomRequest.getRoomId()) {
+                                    writerThread.setInitialScribblesHistory(room.getScribblesHistory());
+                                    writerThread.setRoomId(joinRoomRequest.getRoomId());
+                                    writerThread.enqueueJoinRoomRequest(joinRoomRequest);
+                                }
+                            }
+                        }
+                    }
+
+                    for(var readerThread : readerThreads) {
+                        if(readerThread.getClientId() == joinRoomRequest.getClientId()) {
+                            readerThread.setRoomId(joinRoomRequest.getRoomId());
+                        }
                     }
                 }
             }
@@ -69,9 +119,9 @@ public class MainServerThread extends Thread {
         interruptChildThreads();
     }
 
-    private void addToHistory(ScribblePart scribblePart) {
+    private void addToHistory(Room room, ScribblePart scribblePart) {
         Scribble lastScribble = CollectionHelpersKt.findLast(
-                scribblesHistory,
+                room.getScribblesHistory(),
                 scribble -> scribble.getScribblerId() == scribblePart.getScribblerId()
         );
 
@@ -79,15 +129,15 @@ public class MainServerThread extends Thread {
             lastScribble.addPixels(scribblePart.getPixels());
             lastScribble.setCompleted(scribblePart.isEnd());
         }
-        else scribblesHistory.add(new Scribble(scribblePart));
+        else room.getScribblesHistory().add(new Scribble(scribblePart));
     }
 
-    private void performUndo(int scribblerId) {
+    private void performUndo(Room room, int scribblerId) {
         Scribble lastScribble = CollectionHelpersKt.findLast(
-                scribblesHistory,
+                room.getScribblesHistory(),
                 scribble -> scribble.getScribblerId() == scribblerId
         );
-        scribblesHistory.remove(lastScribble);
+        room.getScribblesHistory().remove(lastScribble);
     }
 
     private void interruptChildThreads() {
@@ -106,7 +156,7 @@ public class MainServerThread extends Thread {
     public void registerClient(Socket clientSocket) {
         int generatedClientId = lastClientId++;
         var readerThread = new ReaderClientThread(generatedClientId, clientSocket, this);
-        var writerThread = new WriterClientThread(generatedClientId, scribblesHistory, clientSocket);
+        var writerThread = new WriterClientThread(generatedClientId, clientSocket, rooms);
 
         System.out.println("Połączył się klient ID = " + generatedClientId);
 
@@ -123,5 +173,13 @@ public class MainServerThread extends Thread {
 
     public void enqueueUndoRequest(UndoRequest undoRequest) throws InterruptedException {
         requestsToDistribute.put(undoRequest);
+    }
+
+    public void enqueueCreateRoomRequest(CreateRoomRequest createRoomRequest) throws InterruptedException {
+        requestsToDistribute.put(createRoomRequest);
+    }
+
+    public void enqueueJoinRoomRequest(JoinRoomRequest joinRoomRequest) throws  InterruptedException {
+        requestsToDistribute.put(joinRoomRequest);
     }
 }

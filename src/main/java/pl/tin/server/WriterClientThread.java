@@ -1,15 +1,15 @@
 package pl.tin.server;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.SneakyThrows;
-import pl.tin.server.events.Request;
-import pl.tin.server.events.DrawRequest;
-import pl.tin.server.events.UndoRequest;
+import pl.tin.server.events.*;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -21,15 +21,18 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class WriterClientThread extends Thread {
 
     private BlockingQueue<Request> requestsToDistribute = new LinkedBlockingDeque<>();
+    private List<Room> rooms;
     @Getter private int clientId;
+    @Getter @Setter private int roomId;
     private Socket socket;
     private DataOutputStream outputStream;
-    private List<Scribble> initialScribblesHistory;
+    @Setter private List<Scribble> initialScribblesHistory;
 
-    public WriterClientThread(int clientId, List<Scribble> initialScribblesHistory, Socket socket) throws IOException {
+    public WriterClientThread(int clientId, Socket socket, List<Room> rooms) throws IOException {
         this.clientId = clientId;
-        this.initialScribblesHistory = initialScribblesHistory;
         this.socket = socket;
+        this.roomId = 0;
+        this.rooms = rooms;
         outputStream = new DataOutputStream(socket.getOutputStream());
     }
 
@@ -37,7 +40,7 @@ public class WriterClientThread extends Thread {
     @SneakyThrows(IOException.class)
     public void run() {
         try {
-            sendStartInfo();
+            sendRoomsOptions();
 
             while (!Thread.interrupted()) {
                 var request = requestsToDistribute.take();
@@ -48,6 +51,12 @@ public class WriterClientThread extends Thread {
                 else if (request instanceof UndoRequest) {
                     sendUndoRequest((UndoRequest)request);
                 }
+                else if (request instanceof CreateRoomRequest) {      //STWORZ POKOJ
+                    sendCreateRoomRequest((CreateRoomRequest)request);
+                }
+                else if (request instanceof JoinRoomRequest) {      //DOLACZ DO POKOJU
+                    sendJoinRoomRequest((JoinRoomRequest)request);
+                }
             }
         }
         catch (InterruptedException | SocketException e) {
@@ -55,6 +64,16 @@ public class WriterClientThread extends Thread {
         }
 
         System.out.println("WriterThread has ended");
+    }
+
+    private void sendRoomsOptions() throws  IOException, InterruptedException {
+        outputStream.writeInt(rooms.size());
+        for(Room room : rooms)
+        {
+            outputStream.writeInt(room.getRoomId());
+            outputStream.writeInt(room.getRoomName().length());
+            outputStream.writeBytes(room.getRoomName());
+        }
     }
 
     private void sendStartInfo() throws IOException, InterruptedException {
@@ -74,6 +93,19 @@ public class WriterClientThread extends Thread {
     private void sendUndoRequest(UndoRequest undoRequest) throws IOException {
         outputStream.writeInt(Request.UNDO_REQUEST);
         outputStream.writeInt(undoRequest.getScribblerId());
+    }
+
+    private void sendCreateRoomRequest(CreateRoomRequest createRoomRequest) throws IOException, InterruptedException {
+        // TODO tu ma byc juz stworzony pokoj i zmienione id pokoju w writer i reader
+        sendStartInfo();
+    }
+
+    private void sendJoinRoomRequest(JoinRoomRequest joinRoomRequest) throws IOException, InterruptedException {
+        sendStartInfo();
+    }
+
+    public void newRoomScribble(){
+        initialScribblesHistory = new LinkedList<>();
     }
 
     private void sendScribblePart(ScribblePart scribblePart) throws IOException, InterruptedException {
@@ -102,6 +134,14 @@ public class WriterClientThread extends Thread {
 
     public void enqueueUndoRequest(UndoRequest undoRequest) throws InterruptedException {
         requestsToDistribute.put(undoRequest);
+    }
+
+    public void enqueueCreateRoomRequest(CreateRoomRequest createRoomRequest) throws InterruptedException {
+        requestsToDistribute.put(createRoomRequest);
+    }
+
+    public void enqueueJoinRoomRequest(JoinRoomRequest joinRoomRequest) throws InterruptedException {
+        requestsToDistribute.put(joinRoomRequest);
     }
 
     @SneakyThrows(IOException.class)

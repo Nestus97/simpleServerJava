@@ -1,10 +1,9 @@
 package pl.tin.server;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.SneakyThrows;
-import pl.tin.server.events.Request;
-import pl.tin.server.events.DrawRequest;
-import pl.tin.server.events.UndoRequest;
+import pl.tin.server.events.*;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -21,6 +20,7 @@ import java.util.List;
 public class ReaderClientThread extends Thread {
 
     @Getter private int clientId;
+    @Getter @Setter private int roomId;
     private Socket socket;
     private MainServerThread mainServerThread;
     private DataInputStream inputStream;
@@ -29,6 +29,7 @@ public class ReaderClientThread extends Thread {
         this.clientId = clientId;
         this.socket = socket;
         this.mainServerThread = mainServerThread;
+        this.roomId = 0;
         inputStream = new DataInputStream(socket.getInputStream());
     }
 
@@ -49,6 +50,16 @@ public class ReaderClientThread extends Thread {
                         var undoRequest = readUndoRequest();
                         mainServerThread.enqueueUndoRequest(undoRequest);
                         break;
+
+                    case Request.CREATE_ROOM_REQUEST:
+                        var createRoomRequest = readCreateRoomRequest();
+                        mainServerThread.enqueueCreateRoomRequest(createRoomRequest);
+                        break;
+
+                    case Request.JOIN_ROOM_REQUEST:
+                        var joinRoomRequest = readJoinRoomRequest();
+                        mainServerThread.enqueueJoinRoomRequest(joinRoomRequest);
+                        break;
                 }
             }
         }
@@ -60,12 +71,28 @@ public class ReaderClientThread extends Thread {
 
     private DrawRequest readDrawRequest() throws IOException, InterruptedException {
         var scribblePart = readScribblePart();
-        return new DrawRequest(scribblePart);
+        return new DrawRequest(scribblePart, this.roomId);
     }
 
     private UndoRequest readUndoRequest() throws IOException {
         var scribblerId = inputStream.readInt();
-        return new UndoRequest(scribblerId);
+        return new UndoRequest(scribblerId, this.roomId);
+    }
+
+    private CreateRoomRequest readCreateRoomRequest() throws IOException {
+        var nameLength = inputStream.readInt();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < nameLength; i++) {
+            stringBuilder.append((char)inputStream.readByte());
+        }
+        String name = stringBuilder.toString();
+
+        return new CreateRoomRequest(clientId, name);
+    }
+
+    private JoinRoomRequest readJoinRoomRequest() throws IOException {
+        var wantedRoomId = inputStream.readInt();
+        return new JoinRoomRequest(clientId, wantedRoomId);
     }
 
     private ScribblePart readScribblePart() throws InterruptedException, IOException {
