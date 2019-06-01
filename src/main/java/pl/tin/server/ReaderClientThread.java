@@ -74,9 +74,8 @@ public class ReaderClientThread extends Thread {
         return new DrawRequest(scribblePart, this.roomId);
     }
 
-    private UndoRequest readUndoRequest() throws IOException {
-        var scribblerId = inputStream.readInt();
-        return new UndoRequest(scribblerId, this.roomId);
+    private UndoRequest readUndoRequest() {
+        return new UndoRequest(this.clientId, this.roomId);
     }
 
     private CreateRoomRequest readCreateRoomRequest() throws IOException {
