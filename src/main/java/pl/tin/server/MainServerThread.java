@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A thread responsible for managing child client-handling threads,
@@ -18,8 +20,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class MainServerThread extends Thread {
 
     private BlockingQueue<Request> requestsToDistribute = new LinkedBlockingDeque<>();
-
     private List<Room> rooms = new ArrayList<>();
+    public static Lock lock = new ReentrantLock();
 
     private List<ReaderClientThread> readerThreads = new ArrayList<>();
     private List<WriterClientThread> writerThreads = new ArrayList<>();
@@ -28,6 +30,11 @@ public class MainServerThread extends Thread {
     private int lastClientId = 1;
     private int lastRoomId = 0;
 
+    public MainServerThread() {
+        rooms.add(new Room(1, "Super pokoj"));
+        rooms.add(new Room(2, "Wspanialy pokoj"));
+        rooms.add(new Room(3, "Zajebisty pokoj"));
+    }
 
     @Override
     public void run() {
@@ -43,15 +50,15 @@ public class MainServerThread extends Thread {
                     var scribblePart = drawRequest.getScribblePart();
                     int roomId = drawRequest.getRoomId();
 
-                    for(var room : rooms)
-                    {
+                    for(var room : rooms) {
                         if(room.getRoomId() == roomId)
                             addToHistory(room, scribblePart);
                     }
+
                     for (var writerThread : writerThreads) {
                         if (writerThread.getClientId() != scribblePart.getScribblerId()
-                                && writerThread.getRoomId() == roomId)
-                        {
+                            && writerThread.getRoomId() == roomId) {
+
                             writerThread.enqueueDrawRequest(drawRequest);
                         }
                     }
@@ -60,8 +67,7 @@ public class MainServerThread extends Thread {
                     var undoRequest = (UndoRequest)request;
                     int roomId = undoRequest.getRoomId();
 
-                    for(var room : rooms)
-                    {
+                    for(var room : rooms) {
                         if(room.getRoomId() == roomId) { performUndo(room, undoRequest.getScribblerId()); }
                     }
 
@@ -126,8 +132,10 @@ public class MainServerThread extends Thread {
         );
 
         if (lastScribble != null && !lastScribble.isCompleted()) {
+            lock.lock();
             lastScribble.addPixels(scribblePart.getPixels());
             lastScribble.setCompleted(scribblePart.isEnd());
+            lock.unlock();
         }
         else room.getScribblesHistory().add(new Scribble(scribblePart));
     }

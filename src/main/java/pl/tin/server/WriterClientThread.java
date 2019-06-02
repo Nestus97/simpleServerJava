@@ -69,8 +69,7 @@ public class WriterClientThread extends Thread {
     private void sendRoomsOptions() throws  IOException, InterruptedException {
         outputStream.writeInt(Request.LOGIN_USER);           // REQUEST 0 - LOGIN_USER
         outputStream.writeInt(rooms.size());
-        for(Room room : rooms)
-        {
+        for(Room room : rooms) {
             outputStream.writeInt(room.getRoomId());
             outputStream.writeInt(room.getRoomName().length());
             outputStream.writeBytes(room.getRoomName());
@@ -112,6 +111,7 @@ public class WriterClientThread extends Thread {
 
     private void sendScribblePart(ScribblePart scribblePart) throws IOException, InterruptedException {
         try {
+            MainServerThread.lock.lock();
             outputStream.writeInt(scribblePart.getPixels().size());
             outputStream.writeInt(scribblePart.getScribblerId());
 
@@ -127,6 +127,9 @@ public class WriterClientThread extends Thread {
         catch (SocketException e) {
             Thread.currentThread().interrupt();
             throw new InterruptedException();
+        }
+        finally {
+            MainServerThread.lock.unlock();
         }
     }
 
