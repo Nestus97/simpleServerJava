@@ -1,15 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="89f33329-26d8-42a2-8251-672c921b4c17" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="89f33329-26d8-42a2-8251-672c921b4c17" name="Default" comment="Fix race condition">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/pl/tin/server/MainServerThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/tin/server/MainServerThread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/pl/tin/server/WriterClientThread.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/tin/server/WriterClientThread.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/pl/tin/server/events/Request.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/tin/server/events/Request.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/pl/tin/server/MainServerThread.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/pl/tin/server/MainServerThread.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/pl/tin/server/WriterClientThread.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/pl/tin/server/WriterClientThread.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/pl/tin/server/events/Request.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/pl/tin/server/events/Request.class" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/out/" />
     <ignored path="$PROJECT_DIR$/target/" />
@@ -27,22 +20,22 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/MainServerThread.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="576">
-              <caret line="135" column="30" selection-start-line="135" selection-start-column="30" selection-end-line="135" selection-end-column="30" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/WriterClientThread.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="305">
-              <caret line="131" column="43" selection-start-line="131" selection-start-column="43" selection-end-line="131" selection-end-column="43" />
+            <state relative-caret-position="2106">
+              <caret line="127" column="4" lean-forward="true" selection-start-line="127" selection-start-column="4" selection-end-line="127" selection-end-column="4" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/WriterClientThread.java">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="792">
+              <caret line="154" column="23" lean-forward="true" selection-start-line="154" selection-start-column="23" selection-end-line="154" selection-end-column="23" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/ScribblePart.java">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="126">
@@ -341,12 +334,20 @@
       <workItem from="1559304770250" duration="8988000" />
       <workItem from="1559317787655" duration="27512000" />
       <workItem from="1559459269299" duration="2600000" />
-      <workItem from="1559494768627" duration="8643000" />
+      <workItem from="1559494768627" duration="10763000" />
     </task>
+    <task id="LOCAL-00001" summary="Fix race condition">
+      <created>1559506218009</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1559506218009</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="125139000" />
+    <option name="totallyTimeSpent" value="127259000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -358,7 +359,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-1" y="0" width="1922" height="1054" extended-state="7" />
+    <frame x="-1" y="0" width="1922" height="1054" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16755603" />
@@ -466,6 +467,10 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Fix race condition" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix race condition" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/src/Main.java" />
@@ -627,20 +632,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/MainServerThread.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="576">
-          <caret line="135" column="30" selection-start-line="135" selection-start-column="30" selection-end-line="135" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/WriterClientThread.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="305">
-          <caret line="131" column="43" selection-start-line="131" selection-start-column="43" selection-end-line="131" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/Scribble.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="72">
@@ -659,6 +650,20 @@
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/MainServerThread.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2106">
+          <caret line="127" column="4" lean-forward="true" selection-start-line="127" selection-start-column="4" selection-end-line="127" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/pl/tin/server/WriterClientThread.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="792">
+          <caret line="154" column="23" lean-forward="true" selection-start-line="154" selection-start-column="23" selection-end-line="154" selection-end-column="23" />
         </state>
       </provider>
     </entry>

@@ -33,7 +33,7 @@ public class MainServerThread extends Thread {
     public MainServerThread() {
         rooms.add(new Room(1, "Super pokoj"));
         rooms.add(new Room(2, "Wspanialy pokoj"));
-        rooms.add(new Room(3, "Zajebisty pokoj"));
+        rooms.add(new Room(3, "Niesamowity pokoj"));
     }
 
     @Override
