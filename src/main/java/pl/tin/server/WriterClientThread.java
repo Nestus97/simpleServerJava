@@ -67,6 +67,7 @@ public class WriterClientThread extends Thread {
     }
 
     private void sendRoomsOptions() throws  IOException, InterruptedException {
+        outputStream.writeInt(Request.LOGIN_USER);           // REQUEST 0 - LOGIN_USER
         outputStream.writeInt(rooms.size());
         for(Room room : rooms)
         {
@@ -77,6 +78,7 @@ public class WriterClientThread extends Thread {
     }
 
     private void sendStartInfo() throws IOException, InterruptedException {
+        outputStream.writeInt(Request.JOIN_ROOM_REQUEST);           // REQUEST 4 - JOIN_ROOM (also after create room)
         outputStream.writeInt(clientId);
 
         outputStream.writeInt(initialScribblesHistory.size());
